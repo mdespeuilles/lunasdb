@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+
+# Dependencies
+node_modules
+
+# Configuration files (will be mounted as volumes)
+config.yaml
+.env
+
+# Backups
+backups/
+*.sql
+*.sql.gz
+*.dump
+
+# Documentation
+README.md
+*.md
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

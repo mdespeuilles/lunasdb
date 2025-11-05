@@ -1,0 +1,75 @@
+databases:
+  my_app:
+    database: my_app_production
+    type: mysql
+    host: localhost
+    port: 3306
+    username: root
+    password: your_mysql_password
+    storage:
+      type: local
+      path: /backups
+      keep: 20  # Keep 20 most recent backups
+
+  my_postgres_app:
+    database: my_postgres_db
+    type: postgres
+    host: localhost
+    port: 5432
+    username: postgres
+    password: your_postgres_password
+    enabled: false  # Set to false to skip this backup
+    storage:
+      type: local
+      path: /backups
+      keep: 10
+
+  production_db:
+    database: production
+    type: mysql
+    host: db.example.com
+    port: 3306
+    username: backup_user
+    password: your_db_password
+    ssl: false  # Set to false to disable SSL, true to require SSL
+    # skipSslVerification: true  # Alternative: skip SSL certificate verification
+    storage:
+      type: s3
+      bucket: my-backup-bucket
+      prefix: backups/mysql/  # Optional prefix in bucket
+      region: eu-west-1
+      accessKeyId: your_aws_access_key_id
+      secretAccessKey: your_aws_secret_access_key
+      keep: 30  # Keep 30 most recent backups
+
+  # Example with self-signed certificate (DigitalOcean, etc.)
+  cloud_db:
+    database: defaultdb
+    type: mysql
+    host: db-mysql-server.db.ondigitalocean.com
+    port: 25060
+    username: dbauser
+    password: your_cloud_db_password
+    skipSslVerification: true  # Skip SSL verification for self-signed certs
+    storage:
+      type: local
+      path: /backups
+      keep: 15
+
+  # Example with DigitalOcean Spaces (S3-compatible)
+  spaces_backup:
+    database: my_database
+    type: postgres
+    host: localhost
+    port: 5432
+    username: postgres
+    password: your_postgres_password
+    storage:
+      type: s3
+      bucket: my-spaces-bucket
+      endpoint: https://fra1.digitaloceanspaces.com  # DigitalOcean Spaces endpoint
+      region: fra1  # Region identifier
+      accessKeyId: your_spaces_access_key
+      secretAccessKey: your_spaces_secret_key
+      prefix: backups/postgres/
+      keep: 20

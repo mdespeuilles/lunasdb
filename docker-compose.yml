@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  backup:
+    build: .
+    image: cronos
+    container_name: cronos-backup
+    volumes:
+      # Mount your configuration file
+      - ./config.yaml:/app/config.yaml:ro
+      # Mount backup directory (for local storage)
+      - ./backups:/backups
+
+    # Use host network to access databases on localhost
+    network_mode: host
+
+    # Restart policy
+    restart: "no"
+# Alternative: use custom network if databases are in Docker
+#   backup:
+#     build: .
+#     networks:
+#       - database_network
+#     # ... rest of config
+#
+# networks:
+#   database_network:
+#     external: true
