@@ -73,3 +73,23 @@ databases:
       secretAccessKey: your_spaces_secret_key
       prefix: backups/postgres/
       keep: 20
+
+  # Example with multiple storage destinations (local + S3)
+  multi_storage_backup:
+    database: critical_data
+    type: mysql
+    host: localhost
+    port: 3306
+    username: root
+    password: your_mysql_password
+    storage:
+      - type: local  # First destination: local filesystem
+        path: /backups
+        keep: 20
+      - type: s3  # Second destination: S3 bucket
+        bucket: my-backup-bucket
+        prefix: backups/critical/
+        region: eu-west-1
+        accessKeyId: your_aws_access_key_id
+        secretAccessKey: your_aws_secret_access_key
+        keep: 30  # Keep more backups in S3

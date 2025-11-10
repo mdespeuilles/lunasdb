@@ -3,6 +3,26 @@ import fs from 'fs';
 import path from 'path';
 
 /**
+ * Validate a single storage configuration
+ */
+function validateStorageConfig(name, storageConfig, storageIndex = null) {
+  const storageLabel = storageIndex !== null ? `storage[${storageIndex}]` : 'storage';
+
+  const validStorageTypes = ['local', 's3'];
+  if (!validStorageTypes.includes(storageConfig.type)) {
+    throw new Error(`Database "${name}" has invalid ${storageLabel} type "${storageConfig.type}". Must be one of: ${validStorageTypes.join(', ')}`);
+  }
+
+  if (storageConfig.type === 'local' && !storageConfig.path) {
+    throw new Error(`Database "${name}" with local ${storageLabel} must specify a path`);
+  }
+
+  if (storageConfig.type === 's3' && !storageConfig.bucket) {
+    throw new Error(`Database "${name}" with S3 ${storageLabel} must specify a bucket`);
+  }
+}
+
+/**
  * Validate database configuration
  */
 function validateDatabaseConfig(name, config) {
@@ -18,18 +38,19 @@ function validateDatabaseConfig(name, config) {
     throw new Error(`Database "${name}" has invalid type "${config.type}". Must be one of: ${validTypes.join(', ')}`);
   }
 
+  // Validate storage configuration (can be object or array)
   if (config.storage) {
-    const validStorageTypes = ['local', 's3'];
-    if (!validStorageTypes.includes(config.storage.type)) {
-      throw new Error(`Database "${name}" has invalid storage type "${config.storage.type}". Must be one of: ${validStorageTypes.join(', ')}`);
-    }
-
-    if (config.storage.type === 'local' && !config.storage.path) {
-      throw new Error(`Database "${name}" with local storage must specify a path`);
-    }
-
-    if (config.storage.type === 's3' && !config.storage.bucket) {
-      throw new Error(`Database "${name}" with S3 storage must specify a bucket`);
+    if (Array.isArray(config.storage)) {
+      // Validate each storage in the array
+      if (config.storage.length === 0) {
+        throw new Error(`Database "${name}" has empty storage array. Provide at least one storage configuration.`);
+      }
+      config.storage.forEach((storageConfig, index) => {
+        validateStorageConfig(name, storageConfig, index);
+      });
+    } else {
+      // Single storage object - validate it
+      validateStorageConfig(name, config.storage);
     }
   }
 }
@@ -91,16 +112,36 @@ export function loadConfig(configPath = '/app/config.yaml') {
       dbConfig.port = dbConfig.type === 'postgres' || dbConfig.type === 'postgresql' ? 5432 : 3306;
     }
 
+    // Normalize storage to array format
     if (!dbConfig.storage) {
-      dbConfig.storage = {
+      // Default storage configuration
+      dbConfig.storage = [{
         type: 'local',
         path: '/backups',
         keep: 10
-      };
+      }];
+    } else if (!Array.isArray(dbConfig.storage)) {
+      // Convert single storage object to array
+      dbConfig.storage = [dbConfig.storage];
     }
 
-    if (!dbConfig.storage.keep) {
-      dbConfig.storage.keep = 10;
+    // Apply defaults to each storage configuration
+    dbConfig.storage.forEach(storageConfig => {
+      if (!storageConfig.keep) {
+        storageConfig.keep = 10;
+      }
+    });
+  }
+
+  // Validate webhook URL if provided
+  if (config.webhook) {
+    if (typeof config.webhook !== 'string') {
+      throw new Error('Webhook must be a valid URL string');
+    }
+    try {
+      new URL(config.webhook);
+    } catch (error) {
+      throw new Error(`Invalid webhook URL: ${config.webhook}`);
     }
   }
 

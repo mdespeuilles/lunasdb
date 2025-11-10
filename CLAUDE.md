@@ -95,7 +95,9 @@ Three SSL options available for MySQL/MariaDB:
 
 ### Storage Configuration
 
-**Local Storage:**
+The tool supports both **single storage** and **multiple storage destinations** per database. Each backup can be saved to multiple locations simultaneously (e.g., local + S3).
+
+**Single Storage (backward compatible):**
 ```yaml
 storage:
   type: local
@@ -103,32 +105,150 @@ storage:
   keep: 20  # Number of backups to retain
 ```
 
-**S3 Storage:**
+**Multiple Storage Destinations:**
 ```yaml
 storage:
-  type: s3
-  bucket: my-backup-bucket
-  accessKeyId: your_aws_access_key_id
-  secretAccessKey: your_aws_secret_access_key
-  prefix: backups/mysql/  # Optional path prefix
-  region: eu-west-1
-  keep: 30
+  - type: local
+    path: /backups
+    keep: 20
+  - type: s3
+    bucket: my-backup-bucket
+    accessKeyId: your_aws_access_key_id
+    secretAccessKey: your_aws_secret_access_key
+    prefix: backups/mysql/
+    region: eu-west-1
+    keep: 30
+```
+
+**Storage Types:**
+
+**Local Storage:**
+```yaml
+type: local
+path: /backups
+keep: 20  # Number of backups to retain
+```
+
+**S3 Storage:**
+```yaml
+type: s3
+bucket: my-backup-bucket
+accessKeyId: your_aws_access_key_id
+secretAccessKey: your_aws_secret_access_key
+prefix: backups/mysql/  # Optional path prefix
+region: eu-west-1
+keep: 30
 ```
 
 **S3-Compatible Storage (DigitalOcean Spaces, Wasabi, MinIO):**
 ```yaml
-storage:
-  type: s3
-  bucket: my-spaces-bucket
-  endpoint: https://fra1.digitaloceanspaces.com  # Custom endpoint
-  region: fra1
-  accessKeyId: your_spaces_access_key
-  secretAccessKey: your_spaces_secret_key
-  prefix: backups/
-  keep: 20
+type: s3
+bucket: my-spaces-bucket
+endpoint: https://fra1.digitaloceanspaces.com  # Custom endpoint
+region: fra1
+accessKeyId: your_spaces_access_key
+secretAccessKey: your_spaces_secret_key
+prefix: backups/
+keep: 20
 ```
 
-S3 credentials (`accessKeyId` and `secretAccessKey`) are configured directly in the storage configuration. Use the optional `endpoint` field for S3-compatible services like DigitalOcean Spaces, Wasabi, or MinIO.
+**Multi-Storage Behavior:**
+- Storage destinations are processed **sequentially** (one after another)
+- Each storage destination has **independent rotation** (different `keep` values allowed)
+- Backup succeeds if **at least one storage succeeds** (lenient mode)
+- Partial failures are indicated with `⚠` symbol (e.g., local succeeded, S3 failed)
+- All storage errors are logged and included in webhook payload
+- Temp files are cleaned up after all storage attempts complete
+
+S3 credentials (`accessKeyId` and `secretAccessKey`) are configured per storage destination. Use the optional `endpoint` field for S3-compatible services like DigitalOcean Spaces, Wasabi, or MinIO.
+
+### Webhook Notifications
+
+**Optional Webhook Configuration:**
+
+You can configure an optional webhook URL to receive backup summary notifications after each backup run. The webhook will receive a POST request with a JSON payload containing:
+
+```yaml
+# Add at the root level of config.yaml
+webhook: https://your-webhook-endpoint.com/backup-notification
+```
+
+**Webhook Payload Structure:**
+
+```json
+{
+  "timestamp": "2025-01-05T10:30:00.000Z",
+  "summary": {
+    "total": 2,
+    "successful": 2,
+    "failed": 0,
+    "skipped": 5,
+    "totalDurationMs": 59000,
+    "totalDurationSec": "59.00"
+  },
+  "summaryText": "============================================================\nBACKUP SUMMARY\n============================================================\nTotal: 2 | Success: 2 | Failed: 0 | Skipped: 5\nTotal duration: 59.00s\n\n✓ fenwick - 0.91 MB - 52.14s\n  → local: /backups/fenwick_2025-01-05_10-30-00.sql.gz\n  → s3: s3://my-bucket/fenwick_2025-01-05_10-30-00.sql.gz\n⚠ duodeal - 2.24 MB - 6.83s\n  → local: /backups/duodeal_2025-01-05_10-30-52.dump\n  ✗ s3: Connection timeout\n⊗ bendy_aderma - SKIPPED\n============================================================",
+  "results": [
+    {
+      "name": "fenwick",
+      "success": true,
+      "sizeMB": "0.91",
+      "durationMs": 52140,
+      "durationSec": "52.14",
+      "storages": [
+        {
+          "type": "local",
+          "path": "/backups/fenwick_2025-01-05_10-30-00.sql.gz",
+          "success": true
+        },
+        {
+          "type": "s3",
+          "path": "s3://my-bucket/fenwick_2025-01-05_10-30-00.sql.gz",
+          "success": true
+        }
+      ],
+      "storageErrors": [],
+      "path": "/backups/fenwick_2025-01-05_10-30-00.sql.gz",
+      "error": null
+    },
+    {
+      "name": "duodeal",
+      "success": true,
+      "sizeMB": "2.24",
+      "durationMs": 6830,
+      "durationSec": "6.83",
+      "storages": [
+        {
+          "type": "local",
+          "path": "/backups/duodeal_2025-01-05_10-30-52.dump",
+          "success": true
+        }
+      ],
+      "storageErrors": [
+        {
+          "type": "s3",
+          "error": "Connection timeout",
+          "success": false
+        }
+      ],
+      "path": "/backups/duodeal_2025-01-05_10-30-52.dump",
+      "error": null
+    }
+  ],
+  "skippedDatabases": ["bendy_aderma", "bendy_aderma_pp", "bendy_rf", "bendy_rf_pp", "fenwick"]
+}
+```
+
+The webhook payload includes:
+- `storages`: Array of successful storage destinations with their paths
+- `storageErrors`: Array of failed storage attempts with error messages
+- `path`: Legacy field for backward compatibility (contains first storage path)
+
+**Implementation Details:**
+- The webhook is called after all backups complete
+- Webhook failures do not stop the backup process
+- The request uses `Content-Type: application/json`
+- Webhook URL is validated during configuration loading ([src/config.js](src/config.js))
+- Webhook sending is handled by [src/webhook.js](src/webhook.js)
 
 ## Docker Networking
 

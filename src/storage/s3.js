@@ -64,19 +64,14 @@ export async function saveToS3(backupFilePath, config) {
     upload.on('httpUploadProgress', (progress) => {
       const percent = Math.round((progress.loaded / progress.total) * 100);
       if (percent % 25 === 0) {
-        console.log(`  Upload progress: ${percent}%`);
+        console.log(`  [S3] Upload progress: ${percent}%`);
       }
     });
 
     await upload.done();
 
     const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
-    console.log(`Backup uploaded successfully: ${sizeMB} MB`);
-
-    // Clean up local file
-    if (fs.existsSync(backupFilePath)) {
-      fs.unlinkSync(backupFilePath);
-    }
+    console.log(`[S3] Backup uploaded successfully: ${sizeMB} MB`);
 
     // Perform rotation - delete old backups
     await rotateS3Backups(s3Client, bucket, prefix, keep);

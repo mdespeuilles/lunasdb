@@ -1,5 +1,5 @@
 {
-  "name": "cronos",
+  "name": "cronosdb",
   "version": "1.0.0",
   "description": "Docker-based database backup tool for MySQL, MariaDB, and PostgreSQL",
   "main": "src/index.js",

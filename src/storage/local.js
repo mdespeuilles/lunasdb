@@ -16,15 +16,12 @@ export async function saveToLocal(backupFilePath, config) {
   const fileName = path.basename(backupFilePath);
   const destinationPath = path.join(storagePath, fileName);
 
-  // If backup was created in a temp location, move it
+  // If backup was created in a temp location, copy it (don't delete source)
   if (backupFilePath !== destinationPath) {
     fs.copyFileSync(backupFilePath, destinationPath);
-    if (fs.existsSync(backupFilePath) && backupFilePath !== destinationPath) {
-      fs.unlinkSync(backupFilePath);
-    }
   }
 
-  console.log(`Backup saved to: ${destinationPath}`);
+  console.log(`[Local] Backup saved to: ${destinationPath}`);
 
   // Perform rotation - delete old backups
   await rotateLocalBackups(storagePath, keep);
