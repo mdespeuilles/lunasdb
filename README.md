@@ -1,46 +1,48 @@
 # Cronos - Database Backup Tool
 
-Outil de sauvegarde automatique pour MySQL, MariaDB et PostgreSQL, fonctionnant dans un container Docker.
+Automatic backup tool for MySQL, MariaDB, and PostgreSQL, running in a Docker container.
 
-## Fonctionnalités
+## Features
 
-- Support de MySQL, MariaDB et PostgreSQL
-- Sauvegarde avec compression automatique
-- Stockage local ou S3
-- Rotation automatique des sauvegardes (garde N versions)
-- Configuration via fichier YAML
-- Pas besoin d'installer les outils de backup localement
+- Support for MySQL, MariaDB, and PostgreSQL
+- Automatic backup compression
+- Local or S3 storage
+- Multiple storage destinations per database (e.g., local + S3)
+- Automatic backup rotation (keeps N versions)
+- YAML configuration file
+- No need to install backup tools locally
+- Webhook notifications with detailed results
 
 ## Installation
 
-### Prérequis
+### Prerequisites
 
 - Docker
 - Docker Compose
 
 ### Configuration
 
-1. Copiez le fichier de configuration exemple :
+1. Copy the example configuration file:
 
 ```bash
 cp config.example.yaml config.yaml
 ```
 
-2. Éditez `config.yaml` avec vos paramètres :
+2. Edit `config.yaml` with your settings:
 
 ```yaml
 databases:
   my_app:
     database: my_app_production
-    type: mysql # ou mariadb, postgres, postgresql
+    type: mysql # or mariadb, postgres, postgresql
     host: localhost
     port: 3306
     username: root
     password: root
     storage:
-      type: local # ou s3
+      type: local # or s3
       path: /backups
-      keep: 20 # Garde 20 sauvegardes
+      keep: 20 # Keep 20 backups
 
   my_postgres:
     database: production_db
@@ -49,7 +51,7 @@ databases:
     port: 5432
     username: postgres
     password: postgres
-    enabled: false # Désactive temporairement ce backup
+    enabled: false # Temporarily disable this backup
     storage:
       type: s3
       bucket: my-backup-bucket
@@ -60,30 +62,63 @@ databases:
       keep: 30
 ```
 
-**Note :** L'option `enabled: false` permet de désactiver temporairement un backup sans supprimer sa configuration. Un message d'avertissement s'affichera lors de l'exécution.
+**Note:** The `enabled: false` option allows you to temporarily disable a backup without removing its configuration. A warning message will be displayed during execution.
 
-## Utilisation
+### Multiple Storage Destinations
 
-### Avec Docker Compose
+You can configure multiple storage destinations for each database. The backup will be saved to all destinations sequentially:
+
+```yaml
+databases:
+  critical_db:
+    database: critical_data
+    type: mysql
+    host: localhost
+    port: 3306
+    username: root
+    password: root
+    storage:
+      - type: local  # First destination: local filesystem
+        path: /backups
+        keep: 20
+      - type: s3  # Second destination: S3 bucket
+        bucket: my-backup-bucket
+        prefix: backups/critical/
+        region: eu-west-1
+        accessKeyId: your_aws_access_key_id
+        secretAccessKey: your_aws_secret_access_key
+        keep: 30  # Keep more backups in S3
+```
+
+**Multi-Storage Behavior:**
+- Storage destinations are processed **sequentially** (one after another)
+- Each storage destination has **independent rotation** (different `keep` values allowed)
+- Backup succeeds if **at least one storage succeeds** (lenient mode)
+- Partial failures are indicated with `⚠` symbol (e.g., local succeeded, S3 failed)
+- All storage errors are logged and included in webhook payload
+
+## Usage
+
+### With Docker Compose
 
 ```bash
-# Construire l'image
+# Build the image
 docker-compose build
 
-# Lancer la sauvegarde
+# Run the backup
 docker-compose up
 
-# En une seule commande
+# Build and run in one command
 docker-compose up --build
 ```
 
-### Avec Docker directement
+### With Docker directly
 
 ```bash
-# Construire l'image
+# Build the image
 docker build -t cronos .
 
-# Lancer la sauvegarde
+# Run the backup
 docker run --rm \
   -v $(pwd)/config.yaml:/app/config.yaml:ro \
   -v $(pwd)/backups:/backups \
@@ -91,19 +126,19 @@ docker run --rm \
   cronos
 ```
 
-### Automatisation avec Cron
+### Automation with Cron
 
-Pour lancer les sauvegardes automatiquement, ajoutez une tâche cron :
+To run backups automatically, add a cron job:
 
 ```bash
-# Ouvrir crontab
+# Open crontab
 crontab -e
 
-# Ajouter une ligne pour backup quotidien à 2h du matin
+# Add a line for daily backup at 2 AM
 0 2 * * * cd /path/to/Cronos && docker-compose up >> /var/log/db-backup.log 2>&1
 ```
 
-Ou créez un script `backup.sh` :
+Or create a `backup.sh` script:
 
 ```bash
 #!/bin/bash
@@ -111,65 +146,65 @@ cd /path/to/Cronos
 docker-compose up --build
 ```
 
-Puis planifiez-le :
+Then schedule it:
 
 ```bash
 0 2 * * * /path/to/backup.sh >> /var/log/db-backup.log 2>&1
 ```
 
-## Configuration détaillée
+## Detailed Configuration
 
-### Options par base de données
+### Database Options
 
-| Option                | Required | Description                                                                                |
-| --------------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `database`            | Oui      | Nom de la base de données                                                                  |
-| `type`                | Oui      | Type: `mysql`, `mariadb`, `postgres`, `postgresql`                                         |
-| `host`                | Oui      | Hôte de la base de données                                                                 |
-| `port`                | Non      | Port (défaut: 3306 pour MySQL, 5432 pour PostgreSQL)                                       |
-| `username`            | Oui      | Nom d'utilisateur                                                                          |
-| `password`            | Oui      | Mot de passe                                                                               |
-| `enabled`             | Non      | `false` pour désactiver temporairement le backup (défaut: `true`)                          |
-| `ssl`                 | Non      | `true` pour forcer SSL, `false` pour désactiver SSL                                        |
-| `skipSslVerification` | Non      | `true` pour ignorer la vérification du certificat SSL (utile pour certificats auto-signés) |
+| Option                | Required | Description                                                                  |
+| --------------------- | -------- | ---------------------------------------------------------------------------- |
+| `database`            | Yes      | Database name                                                                |
+| `type`                | Yes      | Type: `mysql`, `mariadb`, `postgres`, `postgresql`                           |
+| `host`                | Yes      | Database host                                                                |
+| `port`                | No       | Port (default: 3306 for MySQL, 5432 for PostgreSQL)                          |
+| `username`            | Yes      | Username                                                                     |
+| `password`            | Yes      | Password                                                                     |
+| `enabled`             | No       | `false` to temporarily disable the backup (default: `true`)                  |
+| `ssl`                 | No       | `true` to force SSL, `false` to disable SSL                                  |
+| `skipSslVerification` | No       | `true` to skip SSL certificate verification (useful for self-signed certs)   |
 
-### Options de stockage local
+### Local Storage Options
 
-| Option | Required | Description                                    |
-| ------ | -------- | ---------------------------------------------- |
-| `type` | Oui      | `local`                                        |
-| `path` | Oui      | Chemin où sauvegarder les fichiers             |
-| `keep` | Non      | Nombre de sauvegardes à conserver (défaut: 10) |
+| Option | Required | Description                               |
+| ------ | -------- | ----------------------------------------- |
+| `type` | Yes      | `local`                                   |
+| `path` | Yes      | Path where to save backup files           |
+| `keep` | No       | Number of backups to keep (default: 10)   |
 
-### Options de stockage S3
+### S3 Storage Options
 
-| Option            | Required | Description                                                    |
-| ----------------- | -------- | -------------------------------------------------------------- |
-| `type`            | Oui      | `s3`                                                           |
-| `bucket`          | Oui      | Nom du bucket S3 ou Spaces                                     |
-| `accessKeyId`     | Oui      | AWS Access Key ID ou Spaces Access Key                         |
-| `secretAccessKey` | Oui      | AWS Secret Access Key ou Spaces Secret Key                     |
-| `endpoint`        | Non      | Endpoint personnalisé (ex: DigitalOcean Spaces, Wasabi, MinIO) |
-| `prefix`          | Non      | Préfixe dans le bucket (ex: `backups/`)                        |
-| `region`          | Non      | Région AWS ou identifiant de région (défaut: `us-east-1`)      |
-| `keep`            | Non      | Nombre de sauvegardes à conserver (défaut: 10)                 |
+| Option            | Required | Description                                                      |
+| ----------------- | -------- | ---------------------------------------------------------------- |
+| `type`            | Yes      | `s3`                                                             |
+| `bucket`          | Yes      | S3 or Spaces bucket name                                         |
+| `accessKeyId`     | Yes      | AWS Access Key ID or Spaces Access Key                           |
+| `secretAccessKey` | Yes      | AWS Secret Access Key or Spaces Secret Key                       |
+| `endpoint`        | No       | Custom endpoint (e.g., DigitalOcean Spaces, Wasabi, MinIO)       |
+| `prefix`          | No       | Prefix in bucket (e.g., `backups/`)                              |
+| `region`          | No       | AWS region or region identifier (default: `us-east-1`)           |
+| `keep`            | No       | Number of backups to keep (default: 10)                          |
 
-#### Utiliser avec DigitalOcean Spaces
+#### Using with DigitalOcean Spaces
 
-DigitalOcean Spaces est compatible avec l'API S3. Ajoutez simplement le champ `endpoint` :
+DigitalOcean Spaces is S3 API compatible. Simply add the `endpoint` field:
 
 ```yaml
 storage:
   type: s3
   bucket: my-spaces-bucket
-  endpoint: https://fra1.digitaloceanspaces.com # Endpoint de votre région
+  endpoint: https://fra1.digitaloceanspaces.com # Your region's endpoint
   region: fra1
   accessKeyId: your_spaces_access_key
   secretAccessKey: your_spaces_secret_key
   keep: 20
 ```
 
-**Endpoints DigitalOcean Spaces par région :**
+**DigitalOcean Spaces endpoints by region:**
 
 - NYC3: `https://nyc3.digitaloceanspaces.com`
 - AMS3: `https://ams3.digitaloceanspaces.com`
@@ -177,45 +212,62 @@ storage:
 - FRA1: `https://fra1.digitaloceanspaces.com`
 - SFO3: `https://sfo3.digitaloceanspaces.com`
 
-## Format des fichiers de sauvegarde
+### Webhook Notifications
 
-Les fichiers sont nommés avec un timestamp :
+You can configure a webhook to receive backup summary notifications:
 
-- MySQL/MariaDB : `dbname_2024-01-15_10-30-00.sql.gz`
-- PostgreSQL : `dbname_2024-01-15_10-30-00.dump` (format custom compressé)
+```yaml
+# Add at the root level of config.yaml
+webhook: https://your-webhook-endpoint.com/backup-notification
+```
 
-## Accès aux bases de données sur l'hôte
+The webhook receives a POST request with a JSON payload containing:
+- Backup summary (total, successful, failed, skipped)
+- Detailed results for each database
+- Storage details for multi-storage configurations
+- All error messages
 
-Le `docker-compose.yml` utilise `network_mode: host` pour accéder aux bases de données sur `localhost`.
+See [CLAUDE.md](CLAUDE.md#webhook-notifications) for detailed webhook payload structure.
 
-Si vos bases sont dans d'autres containers Docker, modifiez la configuration réseau :
+## Backup File Format
+
+Files are named with a timestamp:
+
+- MySQL/MariaDB: `dbname_2024-01-15_10-30-00.sql.gz`
+- PostgreSQL: `dbname_2024-01-15_10-30-00.dump` (compressed custom format)
+
+## Accessing Databases on Host
+
+The `docker-compose.yml` uses `network_mode: host` to access databases on `localhost`.
+
+If your databases are in other Docker containers, modify the network configuration:
 
 ```yaml
 services:
   backup:
-    # ... autres options
+    # ... other options
     networks:
       - database_network
-    # Retirez network_mode: host
+    # Remove network_mode: host
 
 networks:
   database_network:
     external: true
 ```
 
-## Dépannage
+## Troubleshooting
 
-### Erreur de connexion à la base
+### Database Connection Error
 
-- Vérifiez que le host/port sont corrects
-- Vérifiez que l'utilisateur a les permissions nécessaires
-- Pour localhost, assurez-vous d'utiliser `network_mode: host`
+- Verify that host/port are correct
+- Verify that the user has necessary permissions
+- For localhost, make sure to use `network_mode: host`
 
-### Erreur SSL : "self-signed certificate in certificate chain"
+### SSL Error: "self-signed certificate in certificate chain"
 
-Cette erreur se produit avec des certificats auto-signés (DigitalOcean, AWS RDS, etc.).
+This error occurs with self-signed certificates (DigitalOcean, AWS RDS, etc.).
 
-**Solution :** Ajoutez `skipSslVerification: true` à votre configuration :
+**Solution:** Add `skipSslVerification: true` to your configuration:
 
 ```yaml
 databases:
@@ -226,22 +278,22 @@ databases:
     port: 25060
     username: user
     password: your_password
-    skipSslVerification: true # Ignore le certificat auto-signé
+    skipSslVerification: true # Skip self-signed certificate verification
     storage:
       type: local
       path: /backups
 ```
 
-**Alternatives :**
+**Alternatives:**
 
-- `ssl: false` - Désactive complètement SSL (non recommandé pour production)
-- `ssl: true` - Force SSL avec vérification du certificat
+- `ssl: false` - Completely disables SSL (not recommended for production)
+- `ssl: true` - Forces SSL with certificate verification
 
-### Erreur S3
+### S3 Error
 
-- Vérifiez les credentials AWS
-- Vérifiez que le bucket existe et que vous avez les permissions
-- Vérifiez la région
+- Verify AWS credentials
+- Verify that the bucket exists and you have permissions
+- Verify the region
 
 ## License
 
