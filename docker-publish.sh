@@ -5,9 +5,8 @@
 # Example: ./docker-publish.sh 1.0.0
 #
 # Builds and pushes images for multiple architectures:
-# - linux/amd64 (Intel/AMD 64-bit)
+# - linux/amd64 (Intel/AMD 64-bit - servers, NAS)
 # - linux/arm64 (ARM 64-bit - Apple Silicon, modern ARM servers)
-# - linux/arm/v7 (ARM 32-bit - Raspberry Pi, older ARM devices)
 
 set -e
 
@@ -21,7 +20,7 @@ NC='\033[0m' # No Color
 DOCKER_USERNAME="${DOCKER_USERNAME:-mdespeuilles}"
 IMAGE_NAME="lunasdb"
 FULL_IMAGE_NAME="${DOCKER_USERNAME}/${IMAGE_NAME}"
-PLATFORMS="linux/amd64,linux/arm64,linux/arm/v7"
+PLATFORMS="linux/amd64,linux/arm64"
 
 # Get version from argument or package.json
 if [ -n "$1" ]; then

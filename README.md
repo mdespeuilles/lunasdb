@@ -433,7 +433,6 @@ databases:
 To publish a new version to Docker Hub, use the provided script. The script builds multi-architecture images for:
 - **linux/amd64**: Intel/AMD 64-bit (most servers, NAS devices like Synology)
 - **linux/arm64**: ARM 64-bit (Apple Silicon, modern ARM servers)
-- **linux/arm/v7**: ARM 32-bit (Raspberry Pi, older ARM devices)
 
 ```bash
 # Login to Docker Hub (first time only)
