@@ -59,6 +59,7 @@ lunasdb supports command-line arguments for flexible backup control:
 **Available Options:**
 - `--config <path>` or `-c <path>`: Specify configuration file path (default: config.yaml or CONFIG_PATH env var)
 - `--database <name>` or `-d <name>`: Backup specific database(s) - repeatable for multiple databases
+- `--list` or `-l`: List all databases in configuration and exit (useful to verify setup)
 - `--help` or `-h`: Display help information
 - `--version` or `-V`: Display version number
 
@@ -71,6 +72,9 @@ lunasdb supports command-line arguments for flexible backup control:
 
 **Examples:**
 ```bash
+# List all databases in configuration
+node src/index.js --list
+
 # Backup only specific databases
 node src/index.js --database my_app --database production_db
 

@@ -205,6 +205,11 @@ docker run --rm mdespeuilles/lunasdb:latest --help
 # Show version
 docker run --rm mdespeuilles/lunasdb:latest --version
 
+# List all databases in configuration
+docker run --rm \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
+  mdespeuilles/lunasdb:latest --list
+
 # Use a custom configuration file
 docker run --rm \
   -v $(pwd)/custom-config.yaml:/app/custom.yaml:ro \
@@ -233,6 +238,7 @@ docker run --rm \
 |--------|-------|-------------|
 | `--config <path>` | `-c` | Path to configuration file (default: config.yaml or CONFIG_PATH env var) |
 | `--database <name>` | `-d` | Backup specific database(s) - can be used multiple times to select multiple databases |
+| `--list` | `-l` | List all databases in configuration and exit (useful to verify your setup) |
 | `--help` | `-h` | Display help information |
 | `--version` | `-V` | Display version number |
 

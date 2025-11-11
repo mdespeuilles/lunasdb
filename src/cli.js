@@ -23,7 +23,8 @@ export function parseArguments() {
     .option('-c, --config <path>', 'path to configuration file (default: config.yaml or CONFIG_PATH env var)')
     .option('-d, --database <name>', 'backup specific database(s) - can be used multiple times', (value, previous) => {
       return previous ? [...previous, value] : [value];
-    });
+    })
+    .option('-l, --list', 'list all databases in configuration and exit');
 
   program.parse();
 

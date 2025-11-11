@@ -160,6 +160,52 @@ async function main() {
     // Load configuration
     const config = loadConfig(configPath);
 
+    // Handle --list option
+    if (options.list) {
+      console.log('Database Configuration:');
+      console.log('======================\n');
+
+      const allDatabases = Object.entries(config.databases);
+
+      if (allDatabases.length === 0) {
+        console.log('No databases configured.\n');
+        process.exit(0);
+      }
+
+      allDatabases.forEach(([name, dbConfig]) => {
+        const enabled = dbConfig.enabled !== false;
+        const status = enabled ? '✓' : '✗';
+        const statusText = enabled ? 'enabled' : 'disabled';
+
+        console.log(`${status} ${name} (${statusText})`);
+        console.log(`  Type: ${dbConfig.type}`);
+        console.log(`  Host: ${dbConfig.host}:${dbConfig.port || (dbConfig.type === 'postgres' || dbConfig.type === 'postgresql' ? 5432 : 3306)}`);
+        console.log(`  Database: ${dbConfig.database}`);
+        console.log(`  Username: ${dbConfig.username}`);
+
+        // Display storage configuration
+        const storages = Array.isArray(dbConfig.storage) ? dbConfig.storage : [dbConfig.storage];
+        if (storages.length === 1) {
+          const storage = storages[0];
+          console.log(`  Storage: ${storage.type}${storage.type === 's3' ? ` (${storage.bucket})` : ` (${storage.path})`}`);
+          console.log(`  Keep: ${storage.keep || 10} backups`);
+        } else {
+          console.log(`  Storage: ${storages.length} destinations`);
+          storages.forEach((storage, index) => {
+            console.log(`    ${index + 1}. ${storage.type}${storage.type === 's3' ? ` (${storage.bucket})` : ` (${storage.path})`} - keep ${storage.keep || 10}`);
+          });
+        }
+
+        console.log('');
+      });
+
+      const enabledCount = allDatabases.filter(([_, dbConfig]) => dbConfig.enabled !== false).length;
+      const disabledCount = allDatabases.length - enabledCount;
+
+      console.log(`Total: ${allDatabases.length} database(s) - ${enabledCount} enabled, ${disabledCount} disabled\n`);
+      process.exit(0);
+    }
+
     // Filter databases based on --database argument if provided
     let allDatabases = Object.entries(config.databases);
 
