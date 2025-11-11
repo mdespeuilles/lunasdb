@@ -15,10 +15,27 @@ Automatic backup tool for MySQL, MariaDB, and PostgreSQL, running in a Docker co
 
 ## Installation
 
+### Quick Start (Using Docker Hub)
+
+The easiest way to use lunasdb is to pull the pre-built image from Docker Hub:
+
+```bash
+# Pull the latest image
+docker pull mdespeuilles/lunasdb:latest
+
+# Create a config.yaml file (see Configuration section below)
+# Then run the backup
+docker run --rm \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
+  -v $(pwd)/backups:/backups \
+  --network host \
+  mdespeuilles/lunasdb:latest
+```
+
 ### Prerequisites
 
 - Docker
-- Docker Compose
+- Docker Compose (optional, for automated setup)
 
 ### Configuration
 
@@ -99,7 +116,58 @@ databases:
 
 ## Usage
 
-### With Docker Compose
+### Using Docker Hub Image (Recommended)
+
+```bash
+# Pull the latest version
+docker pull mdespeuilles/lunasdb:latest
+
+# Run the backup
+docker run --rm \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
+  -v $(pwd)/backups:/backups \
+  --network host \
+  mdespeuilles/lunasdb:latest
+
+# Or pull a specific version
+docker pull mdespeuilles/lunasdb:1.0.0
+docker run --rm \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
+  -v $(pwd)/backups:/backups \
+  --network host \
+  mdespeuilles/lunasdb:1.0.0
+```
+
+### With Docker Compose (Using Docker Hub)
+
+Update your `docker-compose.yml` to use the Docker Hub image:
+
+```yaml
+version: "3.8"
+
+services:
+  backup:
+    image: mdespeuilles/lunasdb:latest
+    container_name: lunasdb-backup
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./backups:/backups
+    network_mode: host
+    restart: "no"
+```
+
+Then run:
+
+```bash
+docker-compose pull  # Pull latest image
+docker-compose up    # Run the backup
+```
+
+### Building from Source
+
+If you want to build the image yourself:
+
+#### With Docker Compose
 
 ```bash
 # Build the image
@@ -112,7 +180,7 @@ docker-compose up
 docker-compose up --build
 ```
 
-### With Docker directly
+#### With Docker directly
 
 ```bash
 # Build the image
@@ -132,31 +200,31 @@ lunasdb supports command-line arguments to customize backup behavior:
 
 ```bash
 # Show help
-docker run --rm lunasdb --help
+docker run --rm mdespeuilles/lunasdb:latest --help
 
 # Show version
-docker run --rm lunasdb --version
+docker run --rm mdespeuilles/lunasdb:latest --version
 
 # Use a custom configuration file
 docker run --rm \
   -v $(pwd)/custom-config.yaml:/app/custom.yaml:ro \
   -v $(pwd)/backups:/backups \
   --network host \
-  lunasdb --config /app/custom.yaml
+  mdespeuilles/lunasdb:latest --config /app/custom.yaml
 
 # Backup only specific database(s)
 docker run --rm \
   -v $(pwd)/config.yaml:/app/config.yaml:ro \
   -v $(pwd)/backups:/backups \
   --network host \
-  lunasdb --database my_app
+  mdespeuilles/lunasdb:latest --database my_app
 
 # Backup multiple specific databases
 docker run --rm \
   -v $(pwd)/config.yaml:/app/config.yaml:ro \
   -v $(pwd)/backups:/backups \
   --network host \
-  lunasdb --database my_app --database production_db
+  mdespeuilles/lunasdb:latest --database my_app --database production_db
 ```
 
 **Available CLI Options:**
@@ -175,7 +243,7 @@ To pass CLI arguments with Docker Compose, modify the `command` field in your `d
 ```yaml
 services:
   backup:
-    build: .
+    image: mdespeuilles/lunasdb:latest
     volumes:
       - ./config.yaml:/app/config.yaml:ro
       - ./backups:/backups
@@ -351,6 +419,40 @@ databases:
 - Verify AWS credentials
 - Verify that the bucket exists and you have permissions
 - Verify the region
+
+## Publishing to Docker Hub
+
+### For Maintainers
+
+This project includes automated Docker Hub publishing via GitHub Actions.
+
+#### Quick Publish
+
+To publish a new version:
+
+```bash
+# Commit all changes
+git add .
+git commit -m "chore: release version 1.0.0"
+
+# Create and push a version tag
+git tag v1.0.0
+git push origin main
+git push origin v1.0.0
+```
+
+The GitHub Action will automatically build and push the image to Docker Hub.
+
+#### Manual Publish
+
+Alternatively, use the provided script:
+
+```bash
+./docker-publish.sh        # Uses version from package.json
+./docker-publish.sh 1.0.0  # Specify custom version
+```
+
+For detailed setup instructions, see [.github/DOCKER_HUB_SETUP.md](.github/DOCKER_HUB_SETUP.md).
 
 ## License
 
