@@ -430,7 +430,10 @@ databases:
 
 ### For Maintainers
 
-To publish a new version to Docker Hub, use the provided script:
+To publish a new version to Docker Hub, use the provided script. The script builds multi-architecture images for:
+- **linux/amd64**: Intel/AMD 64-bit (most servers, NAS devices like Synology)
+- **linux/arm64**: ARM 64-bit (Apple Silicon, modern ARM servers)
+- **linux/arm/v7**: ARM 32-bit (Raspberry Pi, older ARM devices)
 
 ```bash
 # Login to Docker Hub (first time only)
@@ -443,10 +446,15 @@ docker login
 ./docker-publish.sh 1.0.0
 ```
 
+**Requirements:**
+- Docker Desktop or Docker with buildx support
+- Multi-architecture build takes longer but ensures compatibility across all platforms
+
 The script will:
-1. Build the Docker image with both version and `latest` tags
-2. Push both tags to Docker Hub
-3. Display the published image URL and pull commands
+1. Setup Docker Buildx for multi-architecture builds
+2. Build images for all supported platforms
+3. Push both version and `latest` tags to Docker Hub
+4. Verify the published manifests
 
 ## License
 
