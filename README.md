@@ -424,35 +424,23 @@ databases:
 
 ### For Maintainers
 
-This project includes automated Docker Hub publishing via GitHub Actions.
-
-#### Quick Publish
-
-To publish a new version:
+To publish a new version to Docker Hub, use the provided script:
 
 ```bash
-# Commit all changes
-git add .
-git commit -m "chore: release version 1.0.0"
+# Login to Docker Hub (first time only)
+docker login
 
-# Create and push a version tag
-git tag v1.0.0
-git push origin main
-git push origin v1.0.0
+# Publish using version from package.json
+./docker-publish.sh
+
+# Or specify a custom version
+./docker-publish.sh 1.0.0
 ```
 
-The GitHub Action will automatically build and push the image to Docker Hub.
-
-#### Manual Publish
-
-Alternatively, use the provided script:
-
-```bash
-./docker-publish.sh        # Uses version from package.json
-./docker-publish.sh 1.0.0  # Specify custom version
-```
-
-For detailed setup instructions, see [.github/DOCKER_HUB_SETUP.md](.github/DOCKER_HUB_SETUP.md).
+The script will:
+1. Build the Docker image with both version and `latest` tags
+2. Push both tags to Docker Hub
+3. Display the published image URL and pull commands
 
 ## License
 
