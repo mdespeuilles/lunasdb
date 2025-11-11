@@ -1,4 +1,4 @@
-# Cronos - Database Backup Tool
+# lunasdb - Database Backup Tool
 
 Automatic backup tool for MySQL, MariaDB, and PostgreSQL, running in a Docker container.
 
@@ -116,14 +116,71 @@ docker-compose up --build
 
 ```bash
 # Build the image
-docker build -t cronos .
+docker build -t lunasdb .
 
 # Run the backup
 docker run --rm \
   -v $(pwd)/config.yaml:/app/config.yaml:ro \
   -v $(pwd)/backups:/backups \
   --network host \
-  cronos
+  lunasdb
+```
+
+### CLI Arguments
+
+lunasdb supports command-line arguments to customize backup behavior:
+
+```bash
+# Show help
+docker run --rm lunasdb --help
+
+# Show version
+docker run --rm lunasdb --version
+
+# Use a custom configuration file
+docker run --rm \
+  -v $(pwd)/custom-config.yaml:/app/custom.yaml:ro \
+  -v $(pwd)/backups:/backups \
+  --network host \
+  lunasdb --config /app/custom.yaml
+
+# Backup only specific database(s)
+docker run --rm \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
+  -v $(pwd)/backups:/backups \
+  --network host \
+  lunasdb --database my_app
+
+# Backup multiple specific databases
+docker run --rm \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
+  -v $(pwd)/backups:/backups \
+  --network host \
+  lunasdb --database my_app --database production_db
+```
+
+**Available CLI Options:**
+
+| Option | Alias | Description |
+|--------|-------|-------------|
+| `--config <path>` | `-c` | Path to configuration file (default: config.yaml or CONFIG_PATH env var) |
+| `--database <name>` | `-d` | Backup specific database(s) - can be used multiple times to select multiple databases |
+| `--help` | `-h` | Display help information |
+| `--version` | `-V` | Display version number |
+
+**Examples with Docker Compose:**
+
+To pass CLI arguments with Docker Compose, modify the `command` field in your `docker-compose.yml`:
+
+```yaml
+services:
+  backup:
+    build: .
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./backups:/backups
+    network_mode: host
+    command: ["--database", "my_app", "--database", "production_db"]
 ```
 
 ### Automation with Cron
@@ -135,14 +192,14 @@ To run backups automatically, add a cron job:
 crontab -e
 
 # Add a line for daily backup at 2 AM
-0 2 * * * cd /path/to/Cronos && docker-compose up >> /var/log/db-backup.log 2>&1
+0 2 * * * cd /path/to/lunasdb && docker-compose up >> /var/log/db-backup.log 2>&1
 ```
 
 Or create a `backup.sh` script:
 
 ```bash
 #!/bin/bash
-cd /path/to/Cronos
+cd /path/to/lunasdb
 docker-compose up --build
 ```
 

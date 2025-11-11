@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Cronos** is a Docker-based database backup tool that supports MySQL, MariaDB, and PostgreSQL. It runs as a containerized service that connects to databases, creates compressed backups, and stores them either locally or on AWS S3 with automatic rotation.
+**lunasdb** is a Docker-based database backup tool that supports MySQL, MariaDB, and PostgreSQL. It runs as a containerized service that connects to databases, creates compressed backups, and stores them either locally or on AWS S3 with automatic rotation.
 
 ## Development Commands
 
@@ -18,7 +18,7 @@ docker-compose up --build
 docker-compose up
 
 # Build Docker image manually
-docker build -t database-backup-tool .
+docker build -t lunasdb .
 
 # Run backup directly with Node (requires DB client tools installed locally)
 npm start
@@ -26,6 +26,9 @@ npm start
 npm run backup
 # or
 node src/index.js
+
+# Run with CLI arguments
+node src/index.js --config custom.yaml --database my_app
 ```
 
 ### Docker Management
@@ -39,7 +42,43 @@ docker run --rm \
   -v $(pwd)/config.yaml:/app/config.yaml:ro \
   -v $(pwd)/backups:/backups \
   --network host \
-  database-backup-tool
+  lunasdb
+
+# Run with CLI arguments
+docker run --rm \
+  -v $(pwd)/config.yaml:/app/config.yaml:ro \
+  -v $(pwd)/backups:/backups \
+  --network host \
+  lunasdb --database my_app --database production_db
+```
+
+### CLI Arguments
+
+lunasdb supports command-line arguments for flexible backup control:
+
+**Available Options:**
+- `--config <path>` or `-c <path>`: Specify configuration file path (default: config.yaml or CONFIG_PATH env var)
+- `--database <name>` or `-d <name>`: Backup specific database(s) - repeatable for multiple databases
+- `--help` or `-h`: Display help information
+- `--version` or `-V`: Display version number
+
+**Implementation:**
+- CLI parsing is handled by [src/cli.js](src/cli.js) using Commander.js
+- Arguments are parsed in [src/index.js](src/index.js:155) at the start of `main()`
+- The `--database` filter is applied before enabled/disabled filtering
+- Missing database names trigger a warning but don't stop execution
+- If all requested databases are invalid, the process exits with code 1
+
+**Examples:**
+```bash
+# Backup only specific databases
+node src/index.js --database my_app --database production_db
+
+# Use custom config file
+node src/index.js --config /path/to/custom.yaml
+
+# Combined usage
+node src/index.js -c custom.yaml -d my_app -d another_db
 ```
 
 ## Architecture
@@ -273,6 +312,7 @@ Backups are timestamped: `{dbname}_YYYY-MM-DD_HH-MM-SS.{extension}`
 
 - **js-yaml** - YAML config parsing
 - **@aws-sdk/client-s3** & **@aws-sdk/lib-storage** - S3 upload/management (AWS SDK v3)
+- **commander** - CLI argument parsing
 - **Docker base image**: node:20-alpine with mysql-client, mariadb-connector-c, postgresql-client
 
 ## Important Implementation Details

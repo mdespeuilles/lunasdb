@@ -23,4 +23,4 @@ COPY src ./src
 RUN mkdir -p /backups
 
 # Set the entrypoint
-CMD ["node", "src/index.js"]
+ENTRYPOINT ["node", "src/index.js"]

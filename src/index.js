@@ -6,6 +6,7 @@ import { backupPostgres } from './backup/postgres.js';
 import { saveToLocal } from './storage/local.js';
 import { saveToS3 } from './storage/s3.js';
 import { sendWebhook } from './webhook.js';
+import { parseArguments } from './cli.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -150,11 +151,37 @@ async function main() {
   console.log('===================\n');
 
   try {
+    // Parse command-line arguments
+    const options = parseArguments();
+
+    // Determine config path: CLI argument > environment variable > default
+    const configPath = options.config || process.env.CONFIG_PATH;
+
     // Load configuration
-    const config = loadConfig(process.env.CONFIG_PATH);
+    const config = loadConfig(configPath);
+
+    // Filter databases based on --database argument if provided
+    let allDatabases = Object.entries(config.databases);
+
+    if (options.database && options.database.length > 0) {
+      const requestedDatabases = new Set(options.database);
+      const missingDatabases = options.database.filter(name => !config.databases[name]);
+
+      if (missingDatabases.length > 0) {
+        console.log(`⚠️  Warning: The following databases are not defined in config: ${missingDatabases.join(', ')}\n`);
+      }
+
+      allDatabases = allDatabases.filter(([name]) => requestedDatabases.has(name));
+
+      if (allDatabases.length === 0) {
+        console.error('Error: No valid databases found matching the specified names');
+        process.exit(1);
+      }
+
+      console.log(`Filtering to ${allDatabases.length} requested database(s): ${options.database.join(', ')}\n`);
+    }
 
     // Count enabled and disabled databases
-    const allDatabases = Object.entries(config.databases);
     const enabledDatabases = allDatabases.filter(([_, dbConfig]) => dbConfig.enabled !== false);
     const disabledDatabases = allDatabases.filter(([_, dbConfig]) => dbConfig.enabled === false);
 

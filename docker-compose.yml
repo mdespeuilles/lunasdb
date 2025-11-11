@@ -3,8 +3,8 @@ version: "3.8"
 services:
   backup:
     build: .
-    image: cronos
-    container_name: cronos-backup
+    image: lunasdb
+    container_name: lunasdb-backup
     volumes:
       # Mount your configuration file
       - ./config.yaml:/app/config.yaml:ro

@@ -1,5 +1,5 @@
 {
-  "name": "cronosdb",
+  "name": "lunasdb",
   "version": "1.0.0",
   "description": "Docker-based database backup tool for MySQL, MariaDB, and PostgreSQL",
   "main": "src/index.js",
@@ -18,8 +18,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "js-yaml": "^4.1.0",
     "@aws-sdk/client-s3": "^3.600.0",
-    "@aws-sdk/lib-storage": "^3.600.0"
+    "@aws-sdk/lib-storage": "^3.600.0",
+    "commander": "^14.0.2",
+    "js-yaml": "^4.1.0"
   }
 }
